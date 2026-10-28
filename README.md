@@ -1,4 +1,4 @@
-# Puzzle-App
+# puzzle-app
 
 Bild eines Puzzles laden, in ein Raster teilen und ein fotografiertes Puzzleteil im Bild finden.
 
