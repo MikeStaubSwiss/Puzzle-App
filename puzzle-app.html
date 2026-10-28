@@ -264,6 +264,30 @@
   </div>
 
 <script>
+// Speicher: In der Claude-Umgebung gibt es window.storage. Außerhalb (z. B. GitHub Pages) sichert die App im Browser (IndexedDB,
+// pro Gerät und Adresse; fasst auch große Bilder). Schnittstelle wie window.storage: get / set / delete.
+if (!window.storage) {
+  const IDB_NAME = 'puzzle-app', IDB_STORE = 'kv';
+  const idb = () => new Promise((resolve, reject) => {
+    if (!window.indexedDB) { reject(new Error('IndexedDB nicht verfügbar')); return; }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  const run = (mode, fn) => idb().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, mode);
+    const st = tx.objectStore(IDB_STORE);
+    const rq = fn(st);
+    tx.oncomplete = () => { db.close(); resolve(rq.result); };
+    tx.onerror = tx.onabort = () => { db.close(); reject(tx.error); };
+  }));
+  window.storage = {
+    get: async (key) => { const v = await run('readonly', (s) => s.get(key)); return v === undefined ? null : { key, value: v }; },
+    set: async (key, value) => { await run('readwrite', (s) => s.put(value, key)); return { key, value }; },
+    delete: async (key) => { await run('readwrite', (s) => s.delete(key)); return { key, deleted: true }; },
+  };
+}
 (function () {
   const STORAGE_KEY = 'bild-raster-katalog-projekt';
   const MAX_DIM = 1400;
